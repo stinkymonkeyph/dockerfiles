@@ -98,7 +98,17 @@ if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
       fi
 
       copy_s3 $DUMP_FILE $S3_FILE
-    else
+      curl -X POST -H "Content-Type: application/json" \
+    -d '{
+        "embeds": [{
+            "title": "DB Backup Created",
+            "description": "DB backup for '"$DB"' was uploaded to S3 successfully",
+            "color": 5814783
+        }]
+    }' \
+    https://discord.com/api/webhooks/1237286242777956363/5mN_t5aS9zaymqrUWUtqwrFt0xu9CCQzVWaTTiJxhyrl7qdDCUn7XNErHBwcd7cPKZjU
+    
+  else
       >&2 echo "Error creating dump of ${DB}"
     fi
   done
