@@ -4,6 +4,7 @@
 set -eo pipefail
 
 apk update
+apk add curl
 
 # install mysqldump
 apk add mysql-client
