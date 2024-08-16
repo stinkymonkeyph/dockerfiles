@@ -8,34 +8,40 @@ notify_discord () {
   FAIL_MSG=$2
 
   if [ "${DISCORD_WEBHOOK_URL}" != "**None**" ]; then
-    curl -H "Content-Type: application/json" -X POST -d "{
-      \"embeds\": [
+    # Construct the JSON payload
+    JSON_PAYLOAD=$(cat <<EOF
+{
+  "embeds": [
+    {
+      "title": "DB Backup to S3 Notification",
+      "color": 3066993,
+      "fields": [
         {
-          \"title\": \"DB Backup to S3 Notification\",
-          \"color\": 3066993,  # Green color for success (you can use different colors)
-          \"fields\": [
-            {
-              \"name\": \"Success\",
-              \"value\": \"$SUCCESS_MSG\",
-              \"inline\": false
-            },
-            {
-              \"name\": \"Fail\",
-              \"value\": \"$FAIL_MSG\",
-              \"inline\": false
-            }
-          ],
-          \"footer\": {
-            \"text\": \"Backup completed at $(date +'%Y-%m-%d %H:%M:%S')\"
-          }
+          "name": "Success",
+          "value": "$SUCCESS_MSG",
+          "inline": false
+        },
+        {
+          "name": "Fail",
+          "value": "$FAIL_MSG",
+          "inline": false
         }
-      ]
-    }" $DISCORD_WEBHOOK_URL
+      ],
+      "footer": {
+        "text": "Backup completed at $(date +'%Y-%m-%d %H:%M:%S')"
+      }
+    }
+  ]
+}
+EOF
+)
+
+    # Send the notification
+    curl -H "Content-Type: application/json" -X POST -d "$JSON_PAYLOAD" $DISCORD_WEBHOOK_URL
   else
     echo "Discord Webhook URL is not set. Skipping notification."
   fi
 }
-
 # Initial checks and variable setups...
 
 MYSQL_HOST_OPTS="-h $MYSQL_HOST -P $MYSQL_PORT -u$MYSQL_USER -p$MYSQL_PASSWORD"
