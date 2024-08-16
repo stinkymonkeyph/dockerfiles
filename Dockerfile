@@ -1,3 +1,4 @@
+
 FROM alpine:latest
 LABEL maintainer="Johannes Schickling <schickling.j@gmail.com>"
 
@@ -22,8 +23,10 @@ ENV S3_FILENAME **None**
 ENV S3_ENSURE_BUCKET_EXISTS yes
 ENV MULTI_FILES no
 ENV SCHEDULE **None**
+ENV DISCORD_WEBHOOK_URL **None**
 
 ADD run.sh run.sh
 ADD backup.sh backup.sh
 
 CMD ["sh", "run.sh"]
+

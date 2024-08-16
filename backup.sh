@@ -1,6 +1,16 @@
+
 #!/bin/sh
 
 set -eo pipefail
+
+notify_discord () {
+  MESSAGE=$1
+  if [ "${DISCORD_WEBHOOK_URL}" != "**None**" ]; then
+    curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$MESSAGE\"}" $DISCORD_WEBHOOK_URL
+  else
+    echo "Discord Webhook URL is not set. Skipping notification."
+  fi
+}
 
 if [ "${S3_ACCESS_KEY_ID}" == "**None**" ]; then
   echo "Warning: You did not set the S3_ACCESS_KEY_ID environment variable."
@@ -31,7 +41,6 @@ if [ "${MYSQL_PASSWORD}" == "**None**" ]; then
 fi
 
 if [ "${S3_IAMROLE}" != "true" ]; then
-  # env vars needed for aws tools - only if an IAM role is not used
   export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID
   export AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY
   export AWS_DEFAULT_REGION=$S3_REGION
@@ -39,6 +48,7 @@ fi
 
 MYSQL_HOST_OPTS="-h $MYSQL_HOST -P $MYSQL_PORT -u$MYSQL_USER -p$MYSQL_PASSWORD"
 DUMP_START_TIME=$(date +"%Y-%m-%dT%H%M%SZ")
+DATABASES_BACKED_UP=""
 
 copy_s3 () {
   SRC_FILE=$1
@@ -70,12 +80,10 @@ copy_s3 () {
   rm $SRC_FILE
 }
 
-# mysqldump extra options
 if [ ! -z "${MYSQLDUMP_EXTRA_OPTIONS}" ]; then
   MYSQLDUMP_OPTIONS="${MYSQLDUMP_OPTIONS} ${MYSQLDUMP_EXTRA_OPTIONS}"
 fi
 
-# Multi file: yes
 if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
   if [ "${MYSQLDUMP_DATABASE}" == "--all-databases" ]; then
     DATABASES=`mysql $MYSQL_HOST_OPTS -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql|sys|innodb)"`
@@ -87,7 +95,6 @@ if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
     echo "Creating individual dump of ${DB} from ${MYSQL_HOST}..."
 
     DUMP_FILE="/tmp/${DB}.sql.gz"
-
     mysqldump $MYSQL_HOST_OPTS $MYSQLDUMP_OPTIONS --databases $DB | gzip > $DUMP_FILE
 
     if [ $? == 0 ]; then
@@ -98,11 +105,11 @@ if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
       fi
 
       copy_s3 $DUMP_FILE $S3_FILE
+      DATABASES_BACKED_UP="${DATABASES_BACKED_UP}${DB} "
     else
       >&2 echo "Error creating dump of ${DB}"
     fi
   done
-# Multi file: no
 else
   echo "Creating dump for ${MYSQLDUMP_DATABASE} from ${MYSQL_HOST}..."
 
@@ -117,9 +124,16 @@ else
     fi
 
     copy_s3 $DUMP_FILE $S3_FILE
+    DATABASES_BACKED_UP="${DATABASES_BACKED_UP}${MYSQLDUMP_DATABASE} "
   else
     >&2 echo "Error creating dump of all databases"
   fi
+fi
+
+if [ -n "$DATABASES_BACKED_UP" ]; then
+  notify_discord "SQL backup finished. Databases backed up: ${DATABASES_BACKED_UP}"
+else
+  notify_discord "SQL backup finished, but no databases were backed up."
 fi
 
 echo "SQL backup finished"
