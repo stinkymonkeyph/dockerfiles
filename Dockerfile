@@ -20,7 +20,7 @@ ENV S3_ENDPOINT **None**
 ENV S3_S3V4 no
 ENV S3_PREFIX 'backup'
 ENV S3_FILENAME **None**
-ENV S3_ENSURE_BUCKET_EXISTS yes
+ENV S3_ENSURE_BUCKET_EXISTS no
 ENV MULTI_FILES no
 ENV SCHEDULE **None**
 ENV DISCORD_WEBHOOK_URL **None**
@@ -29,4 +29,3 @@ ADD run.sh run.sh
 ADD backup.sh backup.sh
 
 CMD ["sh", "run.sh"]
-
