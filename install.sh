@@ -10,9 +10,8 @@ apk update
 apk add mysql-client
 apk add mariadb-connector-c
 
-# install s3 tools
-apk add python3 py3-pip
-pip install awscli
+# install s3 tools (aws-cli)
+apk add aws-cli
 
 # install curl for Discord notifications
 apk add curl
